@@ -1,13 +1,5 @@
-// Vercel Serverless Function
-// Proxies requests to Anthropic API so the key stays secret on the server
-
 export default async function handler(req, res) {
-  // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // CORS — allow your own domain
+  // Handle CORS preflight
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,23 +8,29 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY not set');
+    return res.status(500).json({ error: 'API key not configured on server.' });
+  }
+
   try {
     const { prompt } = req.body;
 
-    if (!prompt || typeof prompt !== 'string') {
+    if (!prompt) {
       return res.status(400).json({ error: 'Missing prompt' });
-    }
-
-    if (prompt.length > 8000) {
-      return res.status(400).json({ error: 'Prompt too long' });
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Content-Type':         'application/json',
-        'x-api-key':            process.env.ANTHROPIC_API_KEY,
-        'anthropic-version':    '2023-06-01',
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model:      'claude-haiku-4-5',
@@ -41,17 +39,19 @@ export default async function handler(req, res) {
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const err = await response.text();
-      console.error('Anthropic error:', response.status, err);
-      return res.status(response.status).json({ error: 'AI service error. Please try again.' });
+      console.error('Anthropic API error:', response.status, JSON.stringify(data));
+      return res.status(response.status).json({ 
+        error: 'AI error: ' + (data?.error?.message || response.status) 
+      });
     }
 
-    const data = await response.json();
     return res.status(200).json(data);
 
   } catch (err) {
-    console.error('Server error:', err);
-    return res.status(500).json({ error: 'Server error. Please try again.' });
+    console.error('Server exception:', err.message);
+    return res.status(500).json({ error: 'Server error: ' + err.message });
   }
 }
