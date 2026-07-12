@@ -7,6 +7,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Estimate Pro">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <title>Driftocity Estimate Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2062,7 +2066,8 @@ ${Object.entries(TRADES).map(([k,t])=>`<button class="trade-pill" onclick="App.s
       res.innerHTML = html;
     })
     .catch(function(err) {
-      res.innerHTML = '<div class="ai-error">&#9888;&#65039; ' + self.esc(err.message || 'Unknown error. Check connection and try again.') + '</div>';
+      var msg = typeof err === 'string' ? err : (err && err.message) ? err.message : JSON.stringify(err);
+      res.innerHTML = '<div class="ai-error">&#9888;&#65039; ' + self.esc(msg || 'Unknown error. Check connection and try again.') + '</div>';
     })
     .finally(function() { btn.disabled = false; });
   },
@@ -2519,7 +2524,7 @@ window.addEventListener('beforeinstallprompt',function(e){
   document.getElementById('install-dismiss')&&document.getElementById('install-dismiss').addEventListener('click',function(){ banner.classList.add('hidden'); localStorage.setItem('install_dismissed','1'); });
 });
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
 document.addEventListener('DOMContentLoaded',()=>App.init());
 
